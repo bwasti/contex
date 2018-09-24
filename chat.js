@@ -87,9 +87,7 @@ function renderChat(data) {
 
     div.addEventListener('mouseout', function() {
         clearAllHighlights();
-        if (selectedMessage) {
-            highlightFromSource(selectedMessage);
-        }
+        defaultHighlight();
     });
     div.addEventListener('mouseover', function() {
         clearAllHighlights();
@@ -114,7 +112,9 @@ function renderChat(data) {
 }
 
 function renderLoop() {
+    let changed = false;
     while (inbound.length) {
+        changed = true;
         let data = inbound.shift();
         let div = renderChat(data);
         let chats = document.getElementById("chats");
@@ -123,6 +123,12 @@ function renderLoop() {
     }
 
     // Refresh highlight
+    if (changed) {
+        defaultHighlight();
+    }
+}
+
+function defaultHighlight() {
     if (selectedMessage) {
         highlightFromSource(selectedMessage);
     } else if (highlightSource) {
