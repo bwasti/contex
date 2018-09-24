@@ -120,7 +120,7 @@ function renderChat(data) {
     return div;
 }
 
-let scrollSlack = 500;
+let scrollSlack = 1000;
 function renderLoop() {
     let changed = false;
     while (inbound.length) {
