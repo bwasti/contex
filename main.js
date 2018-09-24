@@ -4,7 +4,6 @@ let path = require("path");
 let fs = require("fs");
 
 let server = http.createServer(function(request, response) {
-	console.log(request.url);
 
 	let filename = '';
 	if (request.url == '/') {
@@ -98,7 +97,6 @@ wsServer.on('request', function(request) {
 	connection.on('message', function(message) {
 		if (message.type === 'utf8') {
 			let data = JSON.parse(message.utf8Data);
-			console.log(data);
 			let outbound = null;
 			if (data.message) {
 				outbound = {
