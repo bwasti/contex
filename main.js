@@ -5,59 +5,59 @@ let fs = require("fs");
 
 let server = http.createServer(function(request, response) {
 
-	let filename = '';
-	if (request.url == '/') {
-		filename = path.join(process.cwd(), '/index.html');
-	} else if (request.url == '/chat.js') {
-		filename = path.join(process.cwd(), '/chat.js');
-	}
+    let filename = '';
+    if (request.url == '/') {
+        filename = path.join(process.cwd(), '/index.html');
+    } else if (request.url == '/chat.js') {
+        filename = path.join(process.cwd(), '/chat.js');
+    }
 
-	fs.exists(filename, function(exists) {
+    fs.exists(filename, function(exists) {
 
-		fs.readFile(filename, "binary", function(err, file) {
-			if(err) {        
-				response.writeHead(500, {"Content-Type": "text/plain"});
-				response.write(err + "\n");
-				response.end();
-				return;
-			}
+        fs.readFile(filename, "binary", function(err, file) {
+            if (err) {
+                response.writeHead(500, {
+                    "Content-Type": "text/plain"
+                });
+                response.write(err + "\n");
+                response.end();
+                return;
+            }
 
-			response.writeHead(200);
-			response.write(file, "binary");
-			response.end();
-		});
-	});
+            response.writeHead(200);
+            response.write(file, "binary");
+            response.end();
+        });
+    });
 });
 
-server.listen(1337, function() { });
+server.listen(1337, function() {});
 
 wsServer = new WebSocket.Server({
-	server: server
+    server: server
 });
 
 // Rather than 0 so we can use false-y checks
 let unique_integer = 1;
 
 let clients = {};
-let history = [
-	{
-		type: "MESSAGE",
-		payload: {
-			user_id: getUniqueInteger(),
-			message_id: getUniqueInteger(),
-			reply_id: 0,
-			message: "first",
-		}
-	}
-];
+let history = [{
+    type: "MESSAGE",
+    payload: {
+        user_id: getUniqueInteger(),
+        message_id: getUniqueInteger(),
+        reply_id: 0,
+        message: "first",
+    }
+}];
 
 
 function getUniqueInteger() {
-	return unique_integer++;
+    return unique_integer++;
 }
 
 function getNumClients() {
-	return Object.keys(clients).length;
+    return Object.keys(clients).length;
 }
 
 /* Protocol:
@@ -82,64 +82,64 @@ function getNumClients() {
  */
 let ip_rate_limit = {}
 wsServer.on('connection', function(connection, request) {
-  let ip = 
-    request.headers['x-forwarded-for'] || request.connection.remoteAddress;
-  if (!(ip in ip_rate_limit)) {
-		console.log("Ignoring connection request from ", ip);
-    ip_rate_limit = new Date(0);
-  }
-  if (((new Date()) - ip_rate_limit[ip]) < 1000) {
-    return;
-  }
-  ip_rate_limit[ip] = new Date();
-
-	//let connection = request.accept(null, request.origin);
-	let id = getUniqueInteger();
-	clients[id] = connection;
-	console.log("New client ", ip, getNumClients(), "total");
-	connection.send(JSON.stringify({
-		type: "INIT",
-    payload: {
-			id: id,
-			history: history,
+    let ip =
+        request.headers['x-forwarded-for'] || request.connection.remoteAddress;
+    if (!(ip in ip_rate_limit)) {
+        console.log("Ignoring connection request from ", ip);
+        ip_rate_limit = new Date(0);
     }
-	}));
-
-
-	connection.on('message', function(string_data) {
     if (((new Date()) - ip_rate_limit[ip]) < 1000) {
-			console.log("Dropping message from ", ip);
-      return;
+        return;
     }
     ip_rate_limit[ip] = new Date();
 
-		let data = JSON.parse(string_data);
+    //let connection = request.accept(null, request.origin);
+    let id = getUniqueInteger();
+    clients[id] = connection;
+    console.log("New client ", ip, getNumClients(), "total");
+    connection.send(JSON.stringify({
+        type: "INIT",
+        payload: {
+            id: id,
+            history: history,
+        }
+    }));
 
-		let outbound = null;
-		if (data.message) {
-			outbound = {
-				type: "MESSAGE",
-				payload: {
-					user_id: id,
-					message_id: getUniqueInteger(),
-					reply_id: data.id,
-					message: data.message.slice(0, 200),
-				}
-			}
-			if (history.length > 100) {
-				history = history.slice(1);
-			}
-			history.push(outbound);
-		}
-		if (outbound) {
-			for (let client_id in clients) {
-				clients[client_id].send(JSON.stringify(outbound));
-			}
-		}
-	});
 
-	connection.on('close', function(connection) {
-		delete clients[id];
-		console.log("Client leaving", ip, getNumClients(), "total");
-	});
+    connection.on('message', function(string_data) {
+        if (((new Date()) - ip_rate_limit[ip]) < 1000) {
+            console.log("Dropping message from ", ip);
+            return;
+        }
+        ip_rate_limit[ip] = new Date();
+
+        let data = JSON.parse(string_data);
+
+        let outbound = null;
+        if (data.message) {
+            outbound = {
+                type: "MESSAGE",
+                payload: {
+                    user_id: id,
+                    message_id: getUniqueInteger(),
+                    reply_id: data.id,
+                    message: data.message.slice(0, 200),
+                }
+            }
+            if (history.length > 100) {
+                history = history.slice(1);
+            }
+            history.push(outbound);
+        }
+        if (outbound) {
+            for (let client_id in clients) {
+                clients[client_id].send(JSON.stringify(outbound));
+            }
+        }
+    });
+
+    connection.on('close', function(connection) {
+        delete clients[id];
+        console.log("Client leaving", ip, getNumClients(), "total");
+    });
 });
