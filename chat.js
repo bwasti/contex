@@ -99,7 +99,16 @@ function renderChat(data) {
 
     let title = document.createElement("div");
     title.classList.add("message-title");
-    title.textContent = data.message_id;
+
+    let title_message_id = document.createElement("span");
+    title_message_id.textContent = data.message_id;
+    let title_user_id = document.createElement("span");
+    title_user_id.style.fontStyle = 'italic';
+    title_user_id.style.paddingRight = '5px';
+    title_user_id.textContent = data.user_id;
+
+    title.appendChild(title_user_id);
+    title.appendChild(title_message_id);
 
     let body = document.createElement("div");
     body.classList.add("message-body");
