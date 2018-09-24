@@ -130,10 +130,9 @@ function renderLoop() {
         let chats = document.getElementById("chats");
         chats.appendChild(div);
         
-        console.log(chats.scrollHeight - chats.scrollTop);
-        if (chats.scrollHeight - chats.scrollTop < scrollSlack) {
+        //if (chats.scrollHeight - chats.scrollTop < scrollSlack) {
           chats.scrollTop = chats.scrollHeight;
-        }
+        //}
     }
 
     // Refresh highlight
