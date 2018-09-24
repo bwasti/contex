@@ -101,6 +101,7 @@ function renderChat(data) {
         }
     });
     div.addEventListener('mouseover', function() {
+        clearAllHighlights();
         highlightFromSource(div);
     });
 
@@ -193,22 +194,45 @@ function highlight(div, num) {
     }
 }
 
+function hsvToRgb(h, s, v) {
+  var r, g, b;
+
+  var i = Math.floor(h * 6);
+  var f = h * 6 - i;
+  var p = v * (1 - s);
+  var q = v * (1 - f * s);
+  var t = v * (1 - (1 - f) * s);
+
+  switch (i % 6) {
+    case 0: r = v, g = t, b = p; break;
+    case 1: r = q, g = v, b = p; break;
+    case 2: r = p, g = v, b = t; break;
+    case 3: r = p, g = q, b = v; break;
+    case 4: r = t, g = p, b = v; break;
+    case 5: r = v, g = p, b = q; break;
+  }
+
+  return [ r * 255, g * 255, b * 255 ];
+}
+
 function initHighlightClasses(num, base_color) {
     var style = document.createElement('style');
     style.type = 'text/css';
     style.innerHTML = '';
     for (let i = 0; i < num; ++i) {
-        let opacity = (num - i) / num;
-        style.innerHTML += '.' + highlightClassPrefix + '-' +
-            i + '{ background-color: ' +
-            'rgba(' +
-            base_color[0] + ',' +
-            base_color[1] + ',' +
-            base_color[2] + ',' +
-            opacity +
-            ');\n' +
-            'transition: background 0.5s;\n' +
-            '}\n';
+      let hue = 0.5 + 0.5 * (num - i) / num;
+      let opacity = (num - i) / num;
+      base_color = hsvToRgb(hue, 1, 1);
+      style.innerHTML += '.' + highlightClassPrefix + '-' +
+          i + '{ border-left: 5px solid ' +
+          'rgba(' +
+          base_color[0] + ',' +
+          base_color[1] + ',' +
+          base_color[2] + ',' +
+          opacity +
+          ');\n' +
+          'transition: border 0.2s;\n' +
+          '}\n';
     }
     document.getElementsByTagName('head')[0].appendChild(style);
     numHighlightClasses = num;
@@ -228,7 +252,7 @@ function initDOM() {
             selectMessage();
         }
     });
-    initHighlightClasses(3, [150, 150, 150]);
+    initHighlightClasses(10, [255, 0, 0]);
 }
 
 function main() {

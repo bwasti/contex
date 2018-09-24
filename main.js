@@ -1,4 +1,4 @@
-let WebSocketServer = require('websocket').server;
+let WebSocket = require('ws');
 let http = require('http');
 let path = require("path");
 let fs = require("fs");
@@ -31,8 +31,8 @@ let server = http.createServer(function(request, response) {
 
 server.listen(1337, function() { });
 
-wsServer = new WebSocketServer({
-	httpServer: server
+wsServer = new WebSocket.Server({
+	server: server
 });
 
 // Rather than 0 so we can use false-y checks
@@ -80,12 +80,24 @@ function getNumClients() {
  *  - message: The message itself
  *
  */
-wsServer.on('request', function(request) {
-	let connection = request.accept(null, request.origin);
+let ip_rate_limit = {}
+wsServer.on('connection', function(connection, request) {
+  let ip = 
+    request.headers['x-forwarded-for'] || request.connection.remoteAddress;
+  if (!(ip in ip_rate_limit)) {
+		console.log("Ignoring connection request from ", ip);
+    ip_rate_limit = new Date(0);
+  }
+  if (((new Date()) - ip_rate_limit[ip]) < 1000) {
+    return;
+  }
+  ip_rate_limit[ip] = new Date();
+
+	//let connection = request.accept(null, request.origin);
 	let id = getUniqueInteger();
 	clients[id] = connection;
 	console.log("New client,", getNumClients(), "total");
-	connection.sendUTF(JSON.stringify({
+	connection.send(JSON.stringify({
 		type: "INIT",
     payload: {
 			id: id,
@@ -94,30 +106,35 @@ wsServer.on('request', function(request) {
 	}));
 
 
-	connection.on('message', function(message) {
-		if (message.type === 'utf8') {
-			let data = JSON.parse(message.utf8Data);
-			let outbound = null;
-			if (data.message) {
-				outbound = {
-					type: "MESSAGE",
-					payload: {
-						user_id: id,
-						message_id: getUniqueInteger(),
-						reply_id: data.id,
-						message: data.message.slice(0, 200),
-					}
+	connection.on('message', function(string_data) {
+    if (((new Date()) - ip_rate_limit[ip]) < 1000) {
+			console.log("Dropping message from ", ip);
+      return;
+    }
+    ip_rate_limit[ip] = new Date();
+
+		let data = JSON.parse(string_data);
+
+		let outbound = null;
+		if (data.message) {
+			outbound = {
+				type: "MESSAGE",
+				payload: {
+					user_id: id,
+					message_id: getUniqueInteger(),
+					reply_id: data.id,
+					message: data.message.slice(0, 200),
 				}
-				if (history.length > 100) {
-					history = history.slice(1);
-				}
-				history.push(outbound);
 			}
-			if (outbound) {
-        console.log("Sending messages");
-				for (let client_id in clients) {
-					clients[client_id].sendUTF(JSON.stringify(outbound));
-        }
+			if (history.length > 100) {
+				history = history.slice(1);
+			}
+			history.push(outbound);
+		}
+		if (outbound) {
+			console.log("Sending messages");
+			for (let client_id in clients) {
+				clients[client_id].send(JSON.stringify(outbound));
 			}
 		}
 	});
