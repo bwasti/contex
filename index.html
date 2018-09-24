@@ -1,0 +1,94 @@
+ <!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+
+html {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	position: relative;
+	height: 100vh;
+	margin: 0;
+	padding: 0;
+}
+
+#chats {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 30px;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
+#input-container {
+	position: absolute;
+	height: 30px;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: #eee;
+	border-top: 1px solid #aaa;
+}
+
+#input-placeholder {
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	padding-top: 5px;
+	text-align: center;
+}
+
+#input {
+	height: 100%;
+	width: 100%;
+	border: 0px;
+	margin: 0;
+	box-sizing: border-box;
+	padding: 3px;
+}
+
+.message {
+	width: 100%;
+	border-bottom: 1px solid #aaa;
+	position: relative;
+}
+
+.message:hover {
+	cursor: pointer;
+}
+
+.message-title {
+	padding-left: 3px;
+	text-align: right;
+  font-size: 0.75em;
+}
+.message-body {
+	padding: 5px;
+}
+.selected {
+  background: #ddd;
+}
+.hidden {
+	display: none;
+}
+
+</style>
+<script src="https://dagrejs.github.io/project/graphlib/latest/graphlib.min.js"></script>
+<script src="/chat.js"></script>
+</head>
+
+<body>
+  <div id="chats"></div>
+  <div id="input-container">
+		<div id="input-placeholder">...</div>
+		<textarea id="input" class="hidden"></textarea>
+	</div>
+</body>
+
+</html>
