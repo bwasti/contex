@@ -96,7 +96,7 @@ wsServer.on('connection', function(connection, request) {
 	//let connection = request.accept(null, request.origin);
 	let id = getUniqueInteger();
 	clients[id] = connection;
-	console.log("New client,", getNumClients(), "total");
+	console.log("New client ", ip, getNumClients(), "total");
 	connection.send(JSON.stringify({
 		type: "INIT",
     payload: {
@@ -132,7 +132,6 @@ wsServer.on('connection', function(connection, request) {
 			history.push(outbound);
 		}
 		if (outbound) {
-			console.log("Sending messages");
 			for (let client_id in clients) {
 				clients[client_id].send(JSON.stringify(outbound));
 			}
@@ -141,6 +140,6 @@ wsServer.on('connection', function(connection, request) {
 
 	connection.on('close', function(connection) {
 		delete clients[id];
-		console.log("Client leaving,", getNumClients(), "total");
+		console.log("Client leaving", ip, getNumClients(), "total");
 	});
 });
