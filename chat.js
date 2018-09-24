@@ -232,7 +232,7 @@ function initDOM() {
 }
 
 function main() {
-    let ws = new WebSocket('ws://127.0.0.1:1337');
+    let ws = new WebSocket('ws://' + window.location.host);
     ws.onopen = function(event) {}
     ws.onmessage = messageHandler;
 
