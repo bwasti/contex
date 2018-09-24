@@ -111,6 +111,7 @@ function renderChat(data) {
     return div;
 }
 
+let scrollSlack = 500;
 function renderLoop() {
     let changed = false;
     while (inbound.length) {
@@ -119,7 +120,11 @@ function renderLoop() {
         let div = renderChat(data);
         let chats = document.getElementById("chats");
         chats.appendChild(div);
-        chats.scrollTop = chats.scrollHeight;
+        
+        console.log(chats.scrollHeight - chats.scrollTop);
+        if (chats.scrollHeight - chats.scrollTop < scrollSlack) {
+          chats.scrollTop = chats.scrollHeight;
+        }
     }
 
     // Refresh highlight

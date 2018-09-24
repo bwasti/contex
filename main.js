@@ -81,6 +81,7 @@ function getNumClients() {
  *
  */
 let ip_rate_limit = {}
+let rate_limit = 1000;
 wsServer.on('connection', function(connection, request) {
     let ip =
         request.headers['x-forwarded-for'] || request.connection.remoteAddress;
@@ -88,7 +89,7 @@ wsServer.on('connection', function(connection, request) {
         console.log("Ignoring connection request from ", ip);
         ip_rate_limit = new Date(0);
     }
-    if (((new Date()) - ip_rate_limit[ip]) < 1000) {
+    if (((new Date()) - ip_rate_limit[ip]) < rate_limit) {
         return;
     }
     ip_rate_limit[ip] = new Date();
@@ -107,7 +108,7 @@ wsServer.on('connection', function(connection, request) {
 
 
     connection.on('message', function(string_data) {
-        if (((new Date()) - ip_rate_limit[ip]) < 1000) {
+        if (((new Date()) - ip_rate_limit[ip]) < rate_limit) {
             console.log("Dropping message from ", ip);
             return;
         }
