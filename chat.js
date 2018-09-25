@@ -42,9 +42,9 @@ function sendReply(id, message) {
     if (id === null) {
         console.log("Not yet initialized...");
     }
-
+    let reply_id = selectedMessage ? selectedMessage.dataset.message_id : 0;
     outbound.push({
-        id: selectedMessage.dataset.message_id,
+        id: reply_id,
         message: message
     });
 }
@@ -63,15 +63,15 @@ function selectMessage(div) {
     let placeholder = document.getElementById("input-placeholder");
     if (selectedMessage == div) {
         selectedMessage = null;
-        input.classList.add("hidden");
-        placeholder.classList.remove("hidden");
+        //input.classList.add("hidden");
+        //placeholder.classList.remove("hidden");
         return;
     }
 
     div.classList.add("selected");
     selectedMessage = div;
-    input.classList.remove("hidden");
-    placeholder.classList.add("hidden");
+    //input.classList.remove("hidden");
+    //placeholder.classList.add("hidden");
     input.focus();
 }
 
@@ -84,18 +84,18 @@ function renderChat(data) {
     div.addEventListener('click', function() {
         selectMessage(div);
     });
-
-    div.addEventListener('mouseout', function() {
-        clearAllHighlights();
-        defaultHighlight();
-    });
-    div.addEventListener('mouseover', function() {
-        clearAllHighlights();
+    if (data.user_id == id) {
         highlightFromSource(div);
-    });
+    }
 
-    message_graph.setNode(data.message_id, div);
-    message_graph.setEdge(data.reply_id, data.message_id);
+    //div.addEventListener('mouseout', function() {
+    //    clearAllHighlights();
+    //    defaultHighlight();
+    //});
+    //div.addEventListener('mouseover', function() {
+    //    clearAllHighlights();
+    //    highlightFromSource(div);
+    //});
 
     let title = document.createElement("div");
     title.classList.add("message-title");
@@ -106,9 +106,14 @@ function renderChat(data) {
     title_user_id.style.fontStyle = 'italic';
     title_user_id.style.paddingRight = '5px';
     title_user_id.textContent = data.user_id;
+    let title_reply_id = document.createElement("span");
+    title_reply_id.style.float = 'left';
+    title_reply_id.classList.add('title-reply');
+    title_reply_id.style.paddingLeft = '5px';
 
     title.appendChild(title_user_id);
     title.appendChild(title_message_id);
+    title.appendChild(title_reply_id);
 
     let body = document.createElement("div");
     body.classList.add("message-body");
@@ -120,38 +125,65 @@ function renderChat(data) {
     return div;
 }
 
-let scrollSlack = 1000;
 function renderLoop() {
     let changed = false;
     while (inbound.length) {
         changed = true;
         let data = inbound.shift();
         let div = renderChat(data);
+
+        message_graph.setNode(data.message_id, div);
+        message_graph.setEdge(data.reply_id, data.message_id);
+
         let chats = document.getElementById("chats");
         chats.appendChild(div);
-        
-        //if (chats.scrollHeight - chats.scrollTop < scrollSlack) {
-          chats.scrollTop = chats.scrollHeight;
-        //}
+        chats.scrollTop = chats.scrollHeight;
     }
 
     // Refresh highlight
     if (changed) {
+        defaultEmbolden();
         defaultHighlight();
     }
 }
 
-function defaultHighlight() {
-    if (selectedMessage) {
-        highlightFromSource(selectedMessage);
-    } else if (highlightSource) {
-        highlightFromSource(highlightSource);
-    } else {
-        let lastSent = getMostRecentSelfMessage();
-        if (lastSent) {
-            highlightFromSource(lastSent);
+function defaultEmbolden() {
+    for (let node of message_graph.nodes()) {
+        let div = message_graph.node(node);
+        if (!div) {
+            continue;
+        }
+
+        let title_reply_id = div.querySelector('.title-reply');
+        title_reply_id.textContent = '';
+
+        let outEdges = []
+        for (let edge of message_graph.outEdges(node)) {
+            let reply = message_graph.node(edge.w);
+            if (reply.dataset.user_id != div.dataset.user_id) {
+                outEdges.push(reply.dataset.message_id);
+            }
+        }
+        if (outEdges.length) {
+            title_reply_id.textContent = '>> ' + outEdges.join(', ');
         }
     }
+}
+
+function defaultHighlight() {
+    for (let highlightSource of highlightSources) {
+        highlightFromSource(highlightSource);
+    }
+    //if (selectedMessage) {
+    //    highlightFromSource(selectedMessage);
+    //} else if (highlightSource) {
+    //    highlightFromSource(highlightSource);
+    //} else {
+    //    let lastSent = getMostRecentSelfMessage();
+    //    if (lastSent) {
+    //        highlightFromSource(lastSent);
+    //    }
+    //}
 }
 
 let numHighlightClasses = 0;
@@ -174,10 +206,13 @@ function clearHighlight(div) {
     }
 }
 
-let highlightSource = null;
+//let highlightSource = null;
+let highlightSources = [];
 
 function highlightFromSource(div) {
-    highlightSource = div;
+    if (highlightSources.indexOf(div) < 0) {
+        highlightSources.push(div);
+    }
     let nodes = graphlib.alg.dijkstra(
         message_graph,
         div.dataset.message_id,
@@ -207,8 +242,25 @@ function highlightFromSource(div) {
     }
 }
 
+// numHighlightClasses if no highlight
+function getHighlight(div) {
+    for (let c of div.classList) {
+        let prefix = c.slice(0, highlightClassPrefix.length);
+        if (prefix == highlightClassPrefix) {
+            let postfix = c.slice(highlightClassPrefix.length + 1);
+            if (Number.parseInt(postfix) !== NaN) {
+                return Number.parseInt(postfix);
+            }
+        }
+    }
+    return numHighlightClasses;
+}
+
 function highlight(div, num) {
+    let h = getHighlight(div);
+    div.classList.remove(highlightClassPrefix + "-" + h);
     num = parseInt(num);
+    num = Math.min(num, h);
     if (num <= numHighlightClasses) {
         div.classList.add(highlightClassPrefix + "-" + num);
     }
@@ -247,20 +299,23 @@ function hsvToRgb(h, s, v) {
     return [r * 255, g * 255, b * 255];
 }
 
-function initHighlightClasses(num, base_color) {
+function initHighlightClasses(num, base_color, own_color) {
     var style = document.createElement('style');
     style.type = 'text/css';
     style.innerHTML = '';
     for (let i = 0; i < num; ++i) {
         let hue = 0.5 + 0.5 * (num - i) / num;
         let opacity = (num - i) / num;
-        base_color = hsvToRgb(hue, 1, 1);
+        let color = base_color;
+        if (i === 0) {
+            color = own_color;
+        }
         style.innerHTML += '.' + highlightClassPrefix + '-' +
             i + '{ border-left: 5px solid ' +
             'rgba(' +
-            base_color[0] + ',' +
-            base_color[1] + ',' +
-            base_color[2] + ',' +
+            color[0] + ',' +
+            color[1] + ',' +
+            color[2] + ',' +
             opacity +
             ');\n' +
             'transition: border 0.2s;\n' +
@@ -284,7 +339,8 @@ function initDOM() {
             selectMessage();
         }
     });
-    initHighlightClasses(10, [255, 0, 0]);
+    initHighlightClasses(3, [255, 20, 30],
+        [200, 200, 200]);
 }
 
 function main() {
