@@ -41,15 +41,7 @@ wsServer = new WebSocket.Server({
 let unique_integer = 1;
 
 let clients = {};
-let history = [{
-    type: "MESSAGE",
-    payload: {
-        user_id: getUniqueInteger(),
-        message_id: getUniqueInteger(),
-        reply_id: 0,
-        message: "first",
-    }
-}];
+let history = [];
 
 
 function getUniqueInteger() {
